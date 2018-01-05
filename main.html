@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<style>
+canvas {
+    border:1px solid #d3d3d3;
+    background-color: #f1f1f1;
+}
+</style>
+</head>
+<body onload="startGame()">
+<script>
+
+var gameArea = {
+    canvas : document.createElement("canvas"),
+    start : function() {
+        this.canvas.width = 800;
+        this.canvas.height = 600;
+        this.context = this.canvas.getContext("2d");
+        document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+        this.frameNo = 0;
+        },
+    clear : function() {
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+}
+
+var keyPressed=new Array();
+
+var player = new Object();
+player.x = 20;
+player.y = 70;
+player.angle = 0;
+player.speed = 5;
+
+
+var robot = {
+    assetList : [
+        ["png/robot/stand_1.png", "stand1"],
+        ["png/robot/robot_1.png", "walk1"],
+        ["png/robot/robot_2.png", "walk2"],
+    ],
+
+    DEFAULT_ANIMATION : "stand"
+
+    initialize : function(callback) {
+        this._animationTick = 1;    
+        this._animation = robot.DEFAULT_ANIMATION;
+        this._scale = 1;
+        this._assets = loadAssets(this.assetList, function (err) {
+            if (err) alert("Error: " + err);
+            if ( callback ) callback();
+        })
+    },
+
+    tick : function() {
+        // increment the animation tick
+        this._animationTick = this._animationTick + 1;
+
+        // if this does not exist, reset the tick, and the frame
+        this._frame = this._animation + this._animationTick;
+        if ( this._frame in this._assets == false) {
+            this._animationTick = 1; 
+            this._animation = robot.DEFAULT_ANIMATION;  
+            this._frame = this._animation; // revert to default animation
+        }
+
+    },
+    draw : function() {
+        var pic = this._assets[this._frame];
+        gameArea.context.drawImage(pic,player.x,player.y,pic.width*this._scale, pic.height*this._scale);
+    },
+    fire : function() {
+        this._animation = "shoot";
+    },
+    scale : function(percentage) {
+        this._scale = percentage;
+    },
+}
+
+function loadAssets(assetList, callback) {
+    var numberToLoad = assetList.length;
+    var numberLoaded = 0
+;    var err = null;
+    var returnAssets = new Object();
+    for ( i = 0; i < numberToLoad; ++i ) {
+        // create the image, onload, create the canvas
+        var img = new Image();
+        img.newName = assetList[i][1];
+        img.lastAsset =  i  == assetList - 1;
+        img.onload = function() {
+            // create the canvas
+            var tmp = document.createElement("canvas");
+            // resize the canvas
+            tmp.height = this.height;
+            tmp.width = this.width;
+            // draw the canvas
+            tmp.getContext("2d").drawImage(this,0,0);
+            // save the original state of the asset
+            tmp.getContext("2d").save();
+            // store it in the asset collection
+            returnAssets[this.newName] = tmp;
+            // increment the number loaded
+            ++numberLoaded;
+            // if all have loaded, let the outside world know
+            if ( callback && numberLoaded == numberToLoad ) callback(err);
+        }
+        img.onError = function() { 
+            err = "Error loading assets";
+            ++numberLoaded;
+        }
+        img.onTimeout = function() { 
+            err = "Timeout loading assets";
+            ++numberLoaded;
+        }
+
+        // do the load
+        img.src = assetList[i][0];
+    }
+    // this will be unusable until the callback triggers
+    return returnAssets;
+
+}
+
+
+function startGame()
+{
+    gameArea.start();
+
+    plane.initialize( function() {
+        // done loading, setup trigger the game loop
+        setInterval(updateGameArea, 20);
+    })
+}
+
+function updateGameArea()
+{
+    processInput();
+        
+    gameArea.clear()
+
+    plane.tick();
+    plane.draw();
+}
+
+function left() {
+  player.x -= player.speed;
+};
+function right() {
+  player.x += player.speed;
+};
+function up() {
+  player.y -= player.speed;
+};
+
+function down() {
+  player.y += player.speed;
+};
+
+function fire() {
+  plane.fire();
+};
+
+
+window.addEventListener('keydown', function(event) {
+    keyPressed[event.keyCode] = true;
+});
+window.addEventListener('keyup', function(event) {
+    keyPressed[event.keyCode] = false;
+});
+
+function processInput() {
+  // case 37: // Left
+  // case 65: // A
+  if ( keyPressed[37] ||  keyPressed[65] )
+      left();
+
+  // case 38: // Up
+  // case 87: // W
+  if ( keyPressed[38] ||  keyPressed[87] )
+      up();
+
+  // case 39: // Right
+  // case 68: // D
+  if ( keyPressed[39] ||  keyPressed[68] )
+      right();
+
+  // case 40: // Down
+  // case 83: // S
+  if ( keyPressed[40] ||  keyPressed[83] )
+      down();
+
+  // Space Bar
+  if ( keyPressed[32] )
+      fire();
+
+  // Z
+  if ( keyPressed[90] )
+      plane.scale(Math.random());
+
+}
+
+</script>
+<br>
+</body>
+</html>
